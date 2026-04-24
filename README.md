@@ -1,11 +1,10 @@
 # fauth
 
-CLI for FortiAuthenticator 8.0.0 user provisioning.
+CLI for FortiAuthenticator 8.0.0 user provisioning via REST API. Automates
+create/disable/delete of local users, group membership, and FTM token allocation.
 
-Used internally at organization to automate user-add/remove flows against
-customer FortiAuthenticator instances via the REST API.
-
-Cross-platform: macOS, Windows, Linux.
+Cross-platform: macOS, Windows, Linux. Ships as a single self-contained
+binary (built with PyInstaller, no Python install needed on target machines).
 
 ## Install
 
@@ -34,14 +33,14 @@ Contents:
 
 ```toml
 [fac.default]
-host = "fac.example.com"
-ro_keychain = "fauth-example-ro"
-rw_keychain = "fauth-example-rw"
+host = "fac.example.com"             # your FortiAuthenticator hostname or IP
+ro_keychain = "fauth-example-ro"     # keyring service name for the read-only key
+rw_keychain = "fauth-example-rw"     # keyring service name for the read+write key
 
 [defaults]
 warn_tokens_below = 3
 block_tokens_below = 1
-license_prefix_allow = ["EFTM"]
+license_prefix_allow = ["EFTM"]      # ignore FTMTRIAL* licenses for auto-allocation
 ```
 
 ### API keys - OS credential store
@@ -60,6 +59,11 @@ Cross-platform install via the `keyring` command (from the venv):
 keyring set fauth-example-ro api_readonly       # paste the read-only API key
 keyring set fauth-example-rw fauth-cli          # paste the read+write API key
 ```
+
+The service names (`fauth-example-ro` / `fauth-example-rw`) must match
+`ro_keychain` / `rw_keychain` in `config.toml`. The account names
+(`api_readonly` / `fauth-cli`) should match the FortiAuthenticator admin
+usernames you created for each API profile.
 
 Or use OS-native tools:
 
@@ -85,21 +89,21 @@ Writes JSONL per write operation to:
 
 ```
 fauth groups                                  # list all groups
-fauth groups --filter customer                   # filter by prefix
+fauth groups --filter customer                # filter by prefix
 fauth tokens                                  # FTM token pool status
 
 fauth user-show <username>                    # show a user
-fauth user-list --group fwint_admins          # list users in a group
+fauth user-list --group customer_admins       # list users in a group
 
 fauth user-add --username jdoe \
     --first-name John --last-name Doe \
     --email jdoe@customer.com --mobile +46-701234567 \
-    --group fwint_admins --customer example --ticket T-1234
+    --group customer_admins --customer acme --ticket T-1234
 
 fauth user-add --no-mfa --username svc-foo ...   # service account without token
 
-fauth user-addgroup jdoe customer_customer
-fauth user-rmgroup jdoe customer_customer
+fauth user-addgroup jdoe customer_admins
+fauth user-rmgroup jdoe customer_admins
 fauth user-disable jdoe
 fauth user-delete jdoe
 ```
@@ -131,6 +135,12 @@ _FAUTH_COMPLETE=powershell_source fauth > $env:APPDATA\fauth\fauth-complete.ps1
 . $env:APPDATA\fauth\fauth-complete.ps1
 ```
 
-## Project docs
+## Design notes
 
-See `CLAUDE.md` for links to the Obsidian project notes with full design rationale.
+See [docs/DESIGN.md](docs/DESIGN.md) for known FortiAuthenticator 8.0.0 API
+quirks (list vs dict responses, locked tokens, FTM activation mail race) and
+the rationale behind the CLI surface.
+
+## License
+
+MIT (see [LICENSE](LICENSE)).
