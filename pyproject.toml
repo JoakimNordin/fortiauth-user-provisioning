@@ -23,6 +23,9 @@ dev = [
     "pytest-mock>=3.12",
     "responses>=0.25",
 ]
+build = [
+    "pyinstaller>=6.0",
+]
 
 [project.scripts]
 fauth = "fauth.cli:main"

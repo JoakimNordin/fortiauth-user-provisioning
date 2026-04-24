@@ -1,0 +1,84 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            asset_name: fauth-macos-arm64
+            python-version: "3.12"
+          - os: windows-latest
+            asset_name: fauth-windows-x64.exe
+            python-version: "3.12"
+          - os: ubuntu-latest
+            asset_name: fauth-linux-x64
+            python-version: "3.12"
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[build]"
+
+      - name: Build binary (macOS / Linux)
+        if: runner.os != 'Windows'
+        run: |
+          pyinstaller --onefile --name fauth --clean --noconfirm \
+            --collect-all keyring \
+            --collect-all platformdirs \
+            src/fauth/__main__.py
+          mv dist/fauth "dist/${{ matrix.asset_name }}"
+
+      - name: Build binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --onefile --name fauth --clean --noconfirm --collect-all keyring --collect-all platformdirs src/fauth/__main__.py
+          Move-Item dist/fauth.exe "dist/${{ matrix.asset_name }}"
+
+      - name: Smoke test binary
+        run: |
+          ./dist/${{ matrix.asset_name }} --version
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
