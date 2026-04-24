@@ -127,8 +127,28 @@ def cmd(
         )
         raise SystemExit(1)
 
-    user_uri = created.get("resource_uri")
-    user_id = created.get("id")
+    # FAC may return dict (single) or list (bulk-style). Normalize to dict.
+    created_obj: dict | None = None
+    if isinstance(created, dict):
+        created_obj = created
+    elif isinstance(created, list) and created:
+        created_obj = created[0] if isinstance(created[0], dict) else None
+
+    # If response didn't carry enough info, fall back to GET by username
+    if not created_obj or not created_obj.get("resource_uri"):
+        lookup = ctx.ro.get("/localusers/", params={"username__exact": username})
+        users = lookup.get("objects", []) if isinstance(lookup, dict) else []
+        if not users:
+            click.echo(
+                "Error: POST appeared to succeed but user not found via GET. "
+                "Inspect FAC manually.",
+                err=True,
+            )
+            raise SystemExit(1)
+        created_obj = users[0]
+
+    user_uri = created_obj["resource_uri"]
+    user_id = created_obj["id"]
     click.echo(f"Created user '{username}' (ID {user_id}, {user_uri}).")
 
     # --- Add to groups (with rollback on failure) ---
@@ -195,6 +215,7 @@ def _select_available_token(ctx) -> str | None:
         for t in all_tokens
         if t.get("status") == "available"
         and t.get("type") == "ftm"
+        and not t.get("locked")
         and t.get("license")
         and any(t["license"].startswith(p) for p in allowed)
     ]
