@@ -16,9 +16,13 @@ pip install -e .[dev]
 fauth --help
 ```
 
-API-nycklar i macOS Keychain:
+API-nycklar i OS credential store (via `keyring`-library):
 - `fauth-example-ro` / `api_readonly` (read-only, för läskommandon)
 - `fauth-example-rw` / `fauth-cli` (read+write, för skrivkommandon)
+
+Cross-platform: macOS Keychain, Windows Credential Manager, Linux Secret Service.
+
+Se `README.md` för konfigurationssökvägar per OS.
 
 ## Designprinciper
 

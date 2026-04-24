@@ -13,6 +13,8 @@ license = { text = "Proprietary" }
 dependencies = [
     "click>=8.1",
     "requests>=2.31",
+    "keyring>=24.0",
+    "platformdirs>=4.0",
 ]
 
 [project.optional-dependencies]

@@ -1,26 +1,32 @@
 from __future__ import annotations
 
+import getpass
 import json
-import os
+import platform
+import socket
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-AUDIT_DIR = Path.home() / ".local" / "state" / "fauth"
-AUDIT_LOG = AUDIT_DIR / "audit.log"
+from fauth.config import state_dir
+
+
+def _audit_log_path():
+    d = state_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    return d / "audit.log"
 
 
 def log_event(command: str, instance: str, result: str, details: dict[str, Any] | None = None) -> None:
-    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
     entry = {
         "ts": datetime.now(timezone.utc).isoformat(),
-        "user": os.environ.get("USER", "unknown"),
-        "host": os.uname().nodename,
+        "user": getpass.getuser(),
+        "host": socket.gethostname(),
+        "os": platform.system(),
         "instance": instance,
         "command": command,
         "result": result,
     }
     if details:
         entry["details"] = details
-    with AUDIT_LOG.open("a", encoding="utf-8") as f:
+    with _audit_log_path().open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")

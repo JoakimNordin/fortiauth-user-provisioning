@@ -5,23 +5,38 @@ CLI for FortiAuthenticator 8.0.0 user provisioning.
 Used internally at organization to automate user-add/remove flows against
 customer FortiAuthenticator instances via the REST API.
 
+Cross-platform: macOS, Windows, Linux.
+
 ## Install
 
 ```
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # macOS/Linux
+# .venv\Scripts\activate.bat      # Windows cmd
+# .venv\Scripts\Activate.ps1      # Windows PowerShell
 pip install -e .[dev]
 ```
 
 ## Configure
 
-Create `~/.config/fauth/config.toml`:
+### Config file
+
+Create `config.toml` at the OS-appropriate location:
+
+| OS | Path |
+|----|------|
+| macOS / Linux | `~/.config/fauth/config.toml` |
+| Windows | `%APPDATA%\fauth\config.toml` |
+
+Override with the env var `FAUTH_CONFIG=/custom/path/config.toml` for testing.
+
+Contents:
 
 ```toml
 [fac.default]
 host = "fac.example.com"
-ro_keychain = "fauth-example-ro"      # read-only Keychain service
-rw_keychain = "fauth-example-rw"      # read+write Keychain service
+ro_keychain = "fauth-example-ro"
+rw_keychain = "fauth-example-rw"
 
 [defaults]
 warn_tokens_below = 3
@@ -29,12 +44,42 @@ block_tokens_below = 1
 license_prefix_allow = ["EFTM"]
 ```
 
-Store API keys in macOS Keychain (one-time):
+### API keys - OS credential store
+
+API keys are stored in the OS credential store via `keyring`:
+
+| OS | Store |
+|----|-------|
+| macOS | Keychain (login.keychain) |
+| Windows | Credential Manager |
+| Linux | Secret Service / libsecret |
+
+Cross-platform install via the `keyring` command (from the venv):
 
 ```
-security add-generic-password -U -s fauth-example-ro -a api_readonly -w
-security add-generic-password -U -s fauth-example-rw -a fauth-cli -w
+keyring set fauth-example-ro api_readonly       # paste the read-only API key
+keyring set fauth-example-rw fauth-cli          # paste the read+write API key
 ```
+
+Or use OS-native tools:
+
+- **macOS:** `security add-generic-password -U -s fauth-example-ro -a api_readonly -w`
+- **Windows:** Credential Manager GUI → Add generic credential, Internet/Network Address = `fauth-example-ro`, User name = `api_readonly`, Password = the key
+
+Verify with:
+
+```
+keyring get fauth-example-rw fauth-cli
+```
+
+### Audit log
+
+Writes JSONL per write operation to:
+
+| OS | Path |
+|----|------|
+| macOS / Linux | `~/.local/state/fauth/audit.log` |
+| Windows | `%LOCALAPPDATA%\fauth\audit.log` |
 
 ## Usage
 
@@ -59,7 +104,32 @@ fauth user-disable jdoe
 fauth user-delete jdoe
 ```
 
-All write operations log JSONL to `~/.local/state/fauth/audit.log`.
+Use `--dry-run` on any write command to preview the request without calling FAC.
+
+## Shell completion
+
+### zsh (macOS/Linux)
+
+```
+mkdir -p ~/.config/fauth
+_FAUTH_COMPLETE=zsh_source fauth > ~/.config/fauth/fauth-complete.zsh
+echo 'source ~/.config/fauth/fauth-complete.zsh' >> ~/.zshrc
+```
+
+### bash
+
+```
+_FAUTH_COMPLETE=bash_source fauth > ~/.config/fauth/fauth-complete.bash
+echo 'source ~/.config/fauth/fauth-complete.bash' >> ~/.bashrc
+```
+
+### PowerShell
+
+```
+_FAUTH_COMPLETE=powershell_source fauth > $env:APPDATA\fauth\fauth-complete.ps1
+# add to $PROFILE:
+. $env:APPDATA\fauth\fauth-complete.ps1
+```
 
 ## Project docs
 

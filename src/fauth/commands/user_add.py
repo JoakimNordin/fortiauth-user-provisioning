@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
+import getpass
 import re
+import socket
 from typing import Any
 
 import click
@@ -86,7 +87,7 @@ def cmd(
             raise SystemExit(1)
 
     # --- Build payload ---
-    who = f"{os.environ.get('USER', 'unknown')}@{os.uname().nodename}"
+    who = f"{getpass.getuser()}@{socket.gethostname()}"
     payload: dict[str, Any] = {
         "username": username,
         "first_name": first_name,
