@@ -4,6 +4,10 @@ from typing import Any
 from urllib.parse import urljoin
 
 import requests
+from urllib3.exceptions import InsecureRequestWarning
+
+# Silence TLS warning - FAC often uses self-signed or internal-CA certs
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 class FACError(Exception):
@@ -15,6 +19,7 @@ class FACError(Exception):
 
 class FACClient:
     def __init__(self, host: str, username: str, api_key: str, verify_tls: bool = False, timeout: float = 15.0):
+        self.host = host
         self.base_url = f"https://{host}/api/v1/"
         self.auth = (username, api_key)
         self.verify_tls = verify_tls
@@ -22,7 +27,17 @@ class FACClient:
         self._session = requests.Session()
 
     def _request(self, method: str, path: str, **kwargs) -> Any:
-        url = urljoin(self.base_url, path.lstrip("/"))
+        if path.startswith(("http://", "https://")):
+            url = path
+        elif path.startswith("/api/"):
+            # Full absolute path from meta.next ("/api/v1/fortitokens/?...")
+            url = f"https://{self.host}{path}"
+        elif path.startswith("/"):
+            # Shorthand absolute path ("/localusers/") - prepend /api/v1
+            url = f"https://{self.host}/api/v1{path}"
+        else:
+            # Relative path
+            url = urljoin(self.base_url, path)
         kwargs.setdefault("auth", self.auth)
         kwargs.setdefault("verify", self.verify_tls)
         kwargs.setdefault("timeout", self.timeout)
@@ -60,6 +75,25 @@ class FACClient:
 
     def get(self, path: str, params: dict | None = None) -> Any:
         return self._request("GET", path, params=params)
+
+    def get_all(self, path: str, params: dict | None = None) -> list[dict]:
+        """Follow meta.next pagination and return all objects from a list endpoint."""
+        objects: list[dict] = []
+        next_path: str | None = path
+        next_params = dict(params) if params else {}
+        while next_path:
+            page = self._request("GET", next_path, params=next_params)
+            if not isinstance(page, dict) or "objects" not in page:
+                return page if isinstance(page, list) else []
+            objects.extend(page.get("objects", []))
+            meta = page.get("meta") or {}
+            next_url = meta.get("next")
+            if next_url:
+                next_path = next_url
+                next_params = None
+            else:
+                next_path = None
+        return objects
 
     def post(self, path: str, json: dict | None = None) -> Any:
         return self._request("POST", path, json=json)
