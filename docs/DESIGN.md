@@ -17,6 +17,9 @@ Devices" Read-Only):**
 - `user-add` - create a local user, auto-allocate FTM token from the license
   pool, add to groups in a single flow. Supports `--no-mfa` for service
   accounts and `--dry-run` to preview the request.
+- `user-retoken` - rotate FTM token for an existing user (phone change).
+  Picks a fresh token from the pool excluding the user's current serial,
+  PATCHes the user, FortiAuthenticator emails the new activation code.
 - `user-disable` / `user-delete`
 - `user-addgroup` / `user-rmgroup`
 

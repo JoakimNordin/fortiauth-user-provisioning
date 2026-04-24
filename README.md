@@ -104,6 +104,7 @@ fauth user-add --no-mfa --username svc-foo ...   # service account without token
 
 fauth user-addgroup jdoe customer_admins
 fauth user-rmgroup jdoe customer_admins
+fauth user-retoken jdoe                       # assign a new FTM token (phone change)
 fauth user-disable jdoe
 fauth user-delete jdoe
 ```
