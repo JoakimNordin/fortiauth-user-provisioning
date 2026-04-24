@@ -80,6 +80,7 @@ from fauth.commands import (
     user_delete,
     user_addgroup,
     user_rmgroup,
+    user_retoken,
 )
 
 main.add_command(groups.cmd)
@@ -91,6 +92,7 @@ main.add_command(user_disable.cmd)
 main.add_command(user_delete.cmd)
 main.add_command(user_addgroup.cmd)
 main.add_command(user_rmgroup.cmd)
+main.add_command(user_retoken.cmd)
 
 
 def run() -> None:
