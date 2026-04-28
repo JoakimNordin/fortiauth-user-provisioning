@@ -2,26 +2,46 @@
 
 ## Command surface
 
-Nine commands split into read-only and write:
+19 commands grouped by purpose. Read commands work with a FortiAuthenticator
+admin profile limited to "Users and Devices" Read-Only; write commands
+require Read+Write on the same scope.
 
-**Read (works with a FortiAuthenticator admin profile limited to "Users and
-Devices" Read-Only):**
+**Read (read-only profile sufficient):**
 
 - `groups` - list user groups with member counts
-- `tokens` - FortiToken pool status per license
-- `user-show` - show a user by username
-- `user-list` - list users, optionally filtered by group or customer
+- `tokens` - FortiToken pool status per license, including allocatable count
+- `token-info <serial>` - reverse-lookup which user holds a specific token
+- `user-show <username>` - show a user record
+- `user-list` - list users, with filters: `--group`, `--customer`, `--inactive`,
+  `--no-mfa` (compliance), `--token-locked` (locked-pool diagnostics)
+- `user-search` - find users by `--email`, `--customer`, `--ticket`, or
+  `--name`. Useful when only a piece of metadata is known
 
-**Write (requires Read+Write on "Users and Devices"):**
+**User lifecycle (write):**
 
-- `user-add` - create a local user, auto-allocate FTM token from the license
-  pool, add to groups in a single flow. Supports `--no-mfa` for service
-  accounts and `--dry-run` to preview the request.
-- `user-retoken` - rotate FTM token for an existing user (phone change).
-  Picks a fresh token from the pool excluding the user's current serial,
-  PATCHes the user, FortiAuthenticator emails the new activation code.
-- `user-disable` / `user-delete`
-- `user-addgroup` / `user-rmgroup`
+- `user-add` - create user, auto-allocate FTM token, add to groups in one
+  flow. `--no-mfa` for service accounts. `--dry-run` to preview
+- `user-update` - patch attributes (first/last name, email, mobile, customer,
+  ticket) without recreating the user
+- `user-disable` / `user-enable` - toggle `active` flag
+- `user-delete` - hard delete with confirmation prompt (`--yes` to skip)
+- `user-import-csv` - bulk import via FAC's `/csv/localusers/` endpoint
+
+**MFA management (write):**
+
+- `user-enable-mfa` - enable FTM on an existing user that doesn't have MFA
+  (e.g. created via GUI or `user-add --no-mfa`). Picks a token, PATCHes
+  user, FAC mails activation
+- `user-retoken` - swap FTM token on a user who already has MFA (phone
+  change). Excludes the current serial from selection
+- `user-disable-mfa` - remove MFA, frees the token back to the pool
+
+**Group lifecycle (write):**
+
+- `group-create` - create empty group with `--type` (firewall/vpn/radius/tacacs+)
+- `group-delete` - delete group, refuses if non-empty (forces the operator
+  to empty it first via `user-rmgroup`)
+- `user-addgroup` / `user-rmgroup` - manage individual memberships
 
 Why two separate admin profiles (+ two keyring entries)? Principle of least
 privilege: most day-to-day operations are lookups, which never need write

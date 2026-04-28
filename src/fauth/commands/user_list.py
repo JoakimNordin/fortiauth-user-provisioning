@@ -7,9 +7,27 @@ import click
 @click.option("--group", help="Filter by group name (exact match)")
 @click.option("--customer", help="Filter by custom1 (kundkod), exact match")
 @click.option("--inactive", is_flag=True, help="Only show inactive users (active=false)")
+@click.option(
+    "--no-mfa",
+    "no_mfa",
+    is_flag=True,
+    help="Only users without MFA (compliance check)",
+)
+@click.option(
+    "--token-locked",
+    is_flag=True,
+    help="Only users whose assigned token is in the locked pool",
+)
 @click.pass_obj
-def cmd(ctx, group: str | None, customer: str | None, inactive: bool) -> None:
-    """List users, optionally filtered by group or customer."""
+def cmd(
+    ctx,
+    group: str | None,
+    customer: str | None,
+    inactive: bool,
+    no_mfa: bool,
+    token_locked: bool,
+) -> None:
+    """List users, optionally filtered by group, customer, or status flags."""
     if group:
         users = _users_in_group(ctx, group)
     elif customer:
@@ -19,6 +37,20 @@ def cmd(ctx, group: str | None, customer: str | None, inactive: bool) -> None:
 
     if inactive:
         users = [u for u in users if u.get("active") is False]
+
+    if no_mfa:
+        users = [u for u in users if not u.get("token_auth")]
+
+    if token_locked:
+        # Build a set of locked serials, then filter users whose serial is in it.
+        all_tokens = ctx.ro.get_all("/fortitokens/", params={"limit": 100})
+        locked_serials = {
+            t.get("serial") for t in all_tokens if t.get("locked") and t.get("serial")
+        }
+        users = [
+            u for u in users
+            if u.get("token_serial") and u.get("token_serial") in locked_serials
+        ]
 
     if not users:
         click.echo("No users found matching filter.")

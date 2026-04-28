@@ -88,25 +88,43 @@ Writes JSONL per write operation to:
 ## Usage
 
 ```
+# Read commands
 fauth groups                                  # list all groups
 fauth groups --filter customer                # filter by prefix
 fauth tokens                                  # FTM token pool status
+fauth token-info <serial>                     # reverse-lookup which user holds a token
 
 fauth user-show <username>                    # show a user
 fauth user-list --group customer_admins       # list users in a group
+fauth user-list --no-mfa                      # compliance check: users without MFA
+fauth user-list --token-locked                # users assigned to a locked token
+fauth user-search --email jdoe@acme.com       # find users by email/customer/ticket/name
 
+# Lifecycle
 fauth user-add --username jdoe \
     --first-name John --last-name Doe \
     --email jdoe@customer.com --mobile +46-701234567 \
     --group customer_admins --customer acme --ticket T-1234
 
-fauth user-add --no-mfa --username svc-foo ...   # service account without token
+fauth user-add --no-mfa --username svc-foo ...    # service account without token
+fauth user-import-csv users.csv                   # bulk import via FAC's CSV endpoint
 
-fauth user-addgroup jdoe customer_admins
-fauth user-rmgroup jdoe customer_admins
+fauth user-update jdoe --email new@customer.com   # change attributes in-place
+fauth user-disable jdoe
+fauth user-enable jdoe                            # re-enable disabled user
+
+# MFA management
 fauth user-retoken jdoe                       # assign a new FTM token (phone change)
 fauth user-enable-mfa jdoe                    # enable FTM on existing user without MFA
-fauth user-disable jdoe
+fauth user-disable-mfa jdoe                   # remove MFA, free token back to pool
+
+# Group lifecycle
+fauth group-create newcust_users              # create new group
+fauth group-delete newcust_users              # delete (only if empty)
+fauth user-addgroup jdoe customer_admins
+fauth user-rmgroup jdoe customer_admins
+
+# Hard delete
 fauth user-delete jdoe
 ```
 

@@ -82,19 +82,35 @@ from fauth.commands import (
     user_rmgroup,
     user_retoken,
     user_enable_mfa,
+    user_enable,
+    user_disable_mfa,
+    user_update,
+    user_search,
+    user_import_csv,
+    group_create,
+    group_delete,
+    token_info,
 )
 
 main.add_command(groups.cmd)
 main.add_command(tokens.cmd)
 main.add_command(user_show.cmd)
 main.add_command(user_list.cmd)
+main.add_command(user_search.cmd)
 main.add_command(user_add.cmd)
 main.add_command(user_disable.cmd)
+main.add_command(user_enable.cmd)
 main.add_command(user_delete.cmd)
 main.add_command(user_addgroup.cmd)
 main.add_command(user_rmgroup.cmd)
 main.add_command(user_retoken.cmd)
 main.add_command(user_enable_mfa.cmd)
+main.add_command(user_disable_mfa.cmd)
+main.add_command(user_update.cmd)
+main.add_command(user_import_csv.cmd)
+main.add_command(group_create.cmd)
+main.add_command(group_delete.cmd)
+main.add_command(token_info.cmd)
 
 
 def run() -> None:
